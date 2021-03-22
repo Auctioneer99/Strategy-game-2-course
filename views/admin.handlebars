@@ -1,0 +1,12 @@
+<h1>Admin panel</h1>
+<p>Настройте страницу админа пожалуйста</p>
+{{#each servers}}
+this: {{this.name}}<br>
+p1: {{this.p1}} vs p2: {{this.p2}}<br>
+Units: {{#each this.units}}{{this.name}}, {{/each}}<br>
+round: {{this.round}}<br>
+<button>Закрыть лобби</button><button>Удалить игрока1</button><button>Удалить игрока2</button>
+<hr>
+{{/each}}
+<button>Создать новое лобби</button>
+<script src="#"></script>

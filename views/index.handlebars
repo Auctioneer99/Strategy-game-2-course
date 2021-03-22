@@ -1,0 +1,131 @@
+<head>
+  <link rel="stylesheet" href="style/UI.css" />
+  <title>Курсовая работа</title>
+</head>
+
+<body>
+  <script src="js/lib/jquery.min.js"></script>
+  <script src="js/move.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="js/lib/three.js"></script>
+  <script src="js/lib/OrbitControls.js"></script>
+  <script src="js/lib/LoaderSupport.js"></script>
+  <script src="js/lib/OBJLoader.js"></script>
+  {{#if auth}}
+  <script src="js/profile.js"></script>
+  {{else}}
+  <script src="js/login.js"></script>
+  {{/if}}
+  <div id="screen" onclick="setFocus()">
+    <div id="toolTip" hidden></div>
+    <div id="error_containeer"></div>
+    <div id="cards">
+      <div id="hide_cards" onclick="toggleCards()"></div>
+    </div>
+    <div id="queue">
+      <div id="hide_queue" onclick="toggleQueue()"></div>
+    </div>
+    <div id="abilities">
+      <div id="ab1" class="ability_button"></div>
+      <div id="ab2" class="ability_button"></div>
+      <div id="ab3" class="ability_button"></div>
+      <div id="wait" class="ability_button" onclick="playground.CurrentUnit.Abilities['Wait'].Choose()"
+        onmouseenter="ShowToolTip(event, playground.CurrentUnit.Abilities['Wait'])" onmouseleave="HideToolTip()">
+        <img src="Abilities/Wait.png">
+      </div>
+      <div id="fortify" class="ability_button" onclick="playground.CurrentUnit.Abilities['Fortify'].Choose()"
+        onmouseenter="ShowToolTip(event, playground.CurrentUnit.Abilities['Fortify'])" onmouseleave="HideToolTip()">
+        <img src="Abilities/Fortify.png">
+      </div>
+      <div id="hide_abilities" onclick="toggleAbilities()"></div>
+    </div>
+    <div id="roundCont">
+      <div id="player1">
+        Free slot
+      </div>
+      <div id="player2">
+        Free slot
+      </div>
+      <div id="round"></div>
+      <div id="time"></div>
+    </div>
+    <div id="info">
+      <div id="info_unit"></div>
+      <div id="info_log">
+        <div id="log_containeer"></div>
+        <div id="hide_info_log" onclick="toggleInfoLog()"></div>
+        <div id="user_text">
+          <input type="text" id="msg" placeholder="Отправьте сообщение" onkeypress="sendMsgFromInput(event)"><button
+            onclick="sendMsg()">Отправить</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="toggle_main_menu" class="toFront" onclick="toggleMenu()">
+    <img src="img/triangle.png" />
+  </div>
+  <div id="main_menu" class="toFront">
+    {{#if auth}}<div class="main_menu_button" onclick="chooseContext('profile')">Profile</div>
+    {{else}}<div class="main_menu_button" onclick="chooseContext('login')">Login</div>
+    {{/if}}
+    <div class="main_menu_button" onclick="chooseContext('concede')">
+      Concede
+    </div>
+    <div class="main_menu_button" onclick="chooseContext('lobby')">
+      Lobby
+    </div>
+    <div class="main_menu_button" onclick="chooseContext('settings')">
+      Sets
+    </div>
+    <div class="main_menu_button" onclick="chooseContext('servers')">
+      Servers
+    </div>
+    {{#unless auth}}
+    <div class="main_menu_button" onclick="chooseContext('register')">
+      register
+    </div>
+    {{/unless}}
+  </div>
+  <div id="right_bar" class="toFront">{{#if admin}}
+    <div class="main_menu_button" onclick="window.location='/admin'">
+      admin panel
+    </div>
+    {{/if}}
+    <div class="main_menu_button"></div>
+    <div class="main_menu_button"></div>
+    <div class="main_menu_button"></div>
+  </div>
+  {{#if auth}}
+  <div id="profile" class="toFront">
+    <button onclick="window.location = '/logout'">Выйти</button>
+  </div>
+  {{else}}
+  <div id="login" class="toFront">
+    <label>Логин</label><input type="text" name="email"><br>
+    <label>Пароль</label><input type="password" name="password"><br>
+    <button onclick="logIn()">Отправить</button>
+  </div>
+  {{/if}}
+  <div id="lobby" class="toFront"><button onclick="joinAsPlayer()">Подключиться игроком</button></div>
+  <div id="settings" class="toFront"></div>
+  <div id="concede" class="toFront"></div>
+  <div id="servers" class="toFront"></div>
+  {{#unless auth}}
+  <div id="register" class="toFront">
+    <input type="text" name="login">
+    <input type="email" name="email">
+    <input type="password" name="password1">
+    <input type="password" name="password2">
+    <button onclick="register()">Зарегистрироваться</button>
+  </div>
+  {{/unless}}
+  <script src="js/Skills/Skill.js"></script>
+  <script src="js/Skills/MoveAttack.js"></script>
+  <script src="js/UI.js"></script>
+  <script src="js/Lobby.js"></script>
+  <script src="js/Tile.js"></script>
+  <script src="js/Unit.js"></script>
+  <script src="js/gameRenderer.js"></script>
+  <script src="js/Action.js"></script>
+  <script src="js/gameLog.js"></script>
+</body>

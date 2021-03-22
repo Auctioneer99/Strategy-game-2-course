@@ -1,0 +1,655 @@
+<html>
+  <body>
+    <script src="linq.js"></script>
+    <script>
+      class PlaygroundObject {
+        _id;
+        _name = "noname";
+        _currentHealth;
+        _maxHealth;
+        _originalHealth;
+        _currentAttack;
+        _originalAttack;
+        _currentInitiative;
+        _originalInitiative;
+        _lobby;
+        _side;
+        _tile;
+        _currentMoves;
+        _originalMoves;
+        _maxMoves;
+        _effects = [];
+        _abilities = [];
+        _canCounterAttack;
+        _canWait;
+        constructor(id, lobby, side, tile) {
+          this._id = id;
+          this._lobby = lobby;
+          this._side = side;
+          this.OriginalHealth = 100;
+          this.OriginalAttack = 20;
+          this.OriginalMoves = 2;
+          this._tile = tile;
+        }
+        //#region Get and Set
+        get Effects() {
+          return this._effects;
+        }
+        get Abilities() {
+          return this._abilities;
+        }
+        get CanCounterAttack() {
+          return this._canCounterAttack;
+        }
+        set CanCounterAttack(value) {
+          this._canCounterAttack = value;
+          this.Notify("CanCounterAttack", value);
+        }
+        get CanWait() {
+          return this._canWait;
+        }
+        set CanWait(value) {
+          this._canWait = value;
+          this.Notify("CanWait", value);
+        }
+        get MaxMoves() {
+          return this._maxMoves;
+        }
+        set MaxMoves(value) {
+          this.MaxMoves = value;
+          this.Notify("MaxMoves", value);
+          if (value < this.CurrentMoves) {
+            this.CurrentMoves = value;
+          }
+        }
+        get CurrentMoves() {
+          return this._currentMoves;
+        }
+        set CurrentMoves(value) {
+          this._currentMoves = Math.max(value, 0);
+          this.DispatchEvent("MovesChanged");
+          this.Notify("CurrentMoves", value);
+        }
+        get OriginalMoves() {
+          return this._originalMoves;
+        }
+        set OriginalMoves(value) {
+          this._originalMoves = this._currentMoves = this._maxMoves = value;
+          this.Notify("OriginalMoves", value);
+          this.Notify("CurrentMoves", value);
+          this.Notify("MaxMoves", value);
+        }
+        get Tile() {
+          return this._Tile;
+        }
+        set Tile(value) {
+          this._tile = value;
+          this.DispatchEvent("TileChanged");
+          this.Notify("TileInitiative", value.Id);
+        }
+        get Side() {
+          return this._side;
+        }
+        get CurrentInitiative() {
+          return this._currentInitiative;
+        }
+        set CurrentInitiative(value) {
+          this._currentInitiative = value;
+          this.DispatchEvent("InitiativeChanged");
+          this.Notify("CurrentInitiative", value);
+        }
+        get OriginalInitiative() {
+          return this._originalInitiative;
+        }
+        set OriginalInitiative(value) {
+          this._originalInitiative = this._currentInitiative = value;
+          this.Notify("OriginalInitiative", value);
+          this.Notify("CurrentInitiative", value);
+        }
+        get CurrentAttack() {
+          return this._currentAttack;
+        }
+        set CurrentAttack(value) {
+          this._currentAttack = value;
+          this.DispatchEvent("AttackChanged");
+          this.Notify("CurrentAttack", value);
+        }
+        get OriginalAttack() {
+          return this._originalAttack;
+        }
+        set OriginalAttack(value) {
+          this._currentAttack = this._originalAttack = value;
+          this.Notify("CurrentAttack", value);
+          this.Notify("OriginalAttack", value);
+        }
+        get Lobby() {
+          return this._lobby;
+        }
+        get Id() {
+          return this._id;
+        }
+        get Name() {
+          return this._name;
+        }
+        get CurrentHealth() {
+          return this._currentHealth;
+        }
+        set CurrentHealth(value) {
+          value = Math.max(value, this.MaxHealth);
+          if (this.CurrentHealth > value) {
+            this.DispatchEvent("HealthDecreased");
+          }
+          if (this.CurrentHealth < value) {
+            this.DispatchEvent("HealthIncreased");
+          }
+          this._currentHealth = value;
+          this.Notify("CurrentHealth", value);
+          if (value <= 0) {
+            this.Destroy();
+          }
+        }
+        get OriginalHealth() {
+          return this._originalHealth;
+        }
+        set OriginalHealth(value) {
+          this._originalHealth = this._maxHealth = this._currentHealth = value;
+          this.Notify("OriginalHealth", value);
+          this.Notify("MaxHealth", value);
+          this.Notify("CurrentHealth", value);
+        }
+        get MaxHealth() {
+          return this._maxHealth;
+        }
+        set MaxHealth(value) {
+          if (this.currentHealth > value) {
+            this.CurrentHealth = value;
+          }
+          this._maxHealth = value;
+          this.Notify("MaxHealth", value);
+        }
+        //#endregion Get and Set
+        Notify(attribute, value) {
+          this.Lobby.Notify(attribute, value);
+        }
+        Initialize() {
+          console.log(this.toString() + " initialized");
+        }
+        Destroy() {
+          this.DispatchEvent("UnitDead");
+          this.Tile.Unit = null;
+          this.Tile = null;
+        }
+        ApplyDamage(damage, attacker) {
+          this.CurrentHealth -= damage;
+          this.DispatchEvent("DamageTaken");
+        }
+        Attack(target) {
+          target.ApplyDamage(this.CurrentAttack);
+        }
+        DispatchEvent(eventName) {
+          this.Lobby.DispatchEvent(eventName, this);
+        }
+        NewRound() {
+          this.Moves = this.MaxMoves;
+          this.Abilities.forEach((a) => a.NewRound());
+          this.Effects.forEach((e) => e.NewRound());
+          this.CanWait = true;
+          this.CanCounterAttack = true;
+        }
+        EndTurn() {
+          this.CurrentMoves = 0;
+          this.DispatchEvent("UnitEndTurn");
+        }
+        toString() {
+          return this.Name + " " + this.Id + " for " + this.Side;
+        }
+      }
+
+      class Peasant extends PlaygroundObject {
+        constructor(id, lobby) {
+          super(id, lobby);
+          this._name = "Peasant";
+          this.Initialize();
+        }
+      }
+
+      class BloodPriest extends PlaygroundObject {
+        constructor(id, lobby) {
+          super(id, lobby);
+          this._name = "Blood Priest";
+          this.Initialize();
+        }
+        Initialize() {
+          super.Initialize();
+          this._lobby.AddEventListener("DamageTaken", (target) => {
+            console.log(
+              this.toString() + " takes damageEvent from " + target.toString()
+            );
+            this.CurrentHealth += 20;
+          });
+        }
+      }
+
+      class Lobby {
+        _units = [];
+        _callbacks = {};
+        _name;
+        _round;
+        _tiles = [];
+        _queue = [];
+        _originQueue = [];
+        _player1;
+        _player2;
+        _io;
+        _ActionQueue;
+        constructor(name, io) {
+          this._name = name;
+          this._units = [];
+          this._io = io;
+        }
+        //region Get and Set
+        get Name() {
+          return this._name;
+        }
+        get Listeners() {
+          //return this.Io.to(this.Name);
+        }
+        get Io() {
+          return this._io;
+        }
+        get Player1() {
+          return this._player1;
+        }
+        set Player1(value) {
+          if (value == null) {
+            if (this.Player1 != null) {
+              console.log(this.Player1.toString() + " disconnected");
+            }
+          } else {
+            console.log(value.toString() + " connected");
+          }
+          this._player1 = value;
+        }
+        get Player2() {
+          return this._player2;
+        }
+        set Player2(value) {
+          if (value == null) {
+            if (this.Player2 != null) {
+              console.log(this.Player2.toString() + " disconnected");
+            }
+          } else {
+            console.log(value.toString() + " connected");
+          }
+          this._player2 = value;
+        }
+        get ActionQueue() {
+          return this._ActionQueue;
+        }
+        get Round() {
+          return this._round;
+        }
+        set Round(value) {
+          this._round = value;
+          this.Notify("Round", value);
+        }
+        get Tiles() {
+          return this._tiles;
+        }
+        get Queue() {
+          return this._queue;
+        }
+        set Queue(value) {
+          this._queue = value;
+        }
+        get OriginQueue() {
+          return this._originQueue;
+        }
+        get Units() {
+          return this._units;
+        }
+        get CurrentUnit() {
+          return this.Queue[0];
+        }
+        //endregion Get and Set
+        AddEventListener(eventName, handler) {
+          if (eventName in this._callbacks) {
+            this._callbacks[eventName].push(handler);
+          } else {
+            this._callbacks[eventName] = [handler];
+          }
+        }
+        DispatchEvent(eventName, target) {
+          console.log(target.toString() + " invoke " + eventName);
+          if (this._callbacks[eventName]) {
+            this._callbacks[eventName].forEach((handler) => handler(target));
+          }
+        }
+        Notify(attribute, value) {
+          //this.Listeners.forEach((l) => l.emit(attribute, value));
+        }
+        PlayerJoin(req, res) {}
+        AddToQueue(unit) {}
+        RemoveFromQueue(unit) {}
+        AddUnit(unit) {}
+        NewRound() {}
+      }
+
+      class Session {
+        constructor(name, io) {
+          this.name = name;
+          this.unitCount = 0;
+          this.round = 0;
+          this.units = [];
+          this.tiles = [];
+          this.queue = [];
+          this.originQueue = [];
+          this.player1 = new Player();
+          this.player2 = new Player();
+          this.io = io;
+          this.actionQueue = new action.ActionQueue();
+          this.ended = false;
+        }
+        /*---------------GETTERS-------------*/
+        get host() {
+          return this.queue[0].side == 0
+            ? this.player1.cook
+            : this.player2.cook;
+        }
+        /*---------------SESSSION ACTIONS------------------*/
+        joinPlayer(req, res) {
+          if (this.player1.cook && this.player2.cook) return false;
+          let player = new Player();
+          if (!player.initUser(req)) return false;
+          console.log(
+            "Присоединение " +
+              player.name +
+              " к игрокам на сервере " +
+              this.name
+          );
+          console.log(player);
+          if (!this.player1.cook) {
+            this.player1 = player;
+          } else {
+            this.player2 = player;
+          }
+          return true;
+        }
+        connectPlayer(socket) {
+          if (
+            socket.session["connect.sid"] !== this.player1.cook &&
+            socket.session["connect.sid"] !== this.player2.cook
+          )
+            return;
+          console.log("Переподключение игрока " + this.name);
+          this.playerBindEvents(socket);
+        }
+        playerBindEvents(socket) {
+          socket.on("addUnit", (id) => this.addUnitByName(id, "Archer", 0));
+          socket.on("ability", (abilityID, tileID) =>
+            this.unitUseAbility(abilityID, tileID, socket)
+          );
+          socket.on("message", (msg) => {
+            if (msg.trim() == "") return;
+            this.persons.emit(
+              "message",
+              msg.trim(),
+              socket.session["connect.sid"] == this.player1.cook
+                ? this.player1.name
+                : this.player2.name
+            );
+          });
+          socket.on("disconnect", () => {
+            console.log("Игрок вышел " + this.name);
+            return;
+          });
+        }
+        closeSession(looser) {
+          let winner = looser == 0 ? this.player2 : this.player1;
+          console.log(winner.name + " - победитель");
+          this.ended = true;
+          this.persons.emit("sessionEnded", winner.name);
+          ///Преобразоваие
+        }
+        nextTurn() {
+          this.queue.splice(0, 1);
+          if (this.queue.length == 0) {
+            console.log("Очередь пуста");
+            this.nextRound();
+            return;
+          }
+          if (!this.queue[0].isExist()) {
+            console.log(
+              "Так как юнита больше нет, наступает ход следующего юнита"
+            );
+            this.nextTurn();
+            return;
+          }
+          this.queue[0].startTurn();
+          console.log("  Ход " + this.queue[0].name + "  " + this.queue[0].id);
+          console.log("  ОП = " + this.queue[0].currentMoves);
+          this.persons.emit("unitTurn", this.queue[0].id);
+        }
+        nextRound() {
+          this.round++;
+          console.log("Начинается " + this.round + " раунд");
+
+          for (let i = 0; i < this.units.length; i++)
+            this.units[i].refreshMoves();
+
+          this.queue = [];
+          this.originQueue = [];
+
+          for (let i = 0; i < this.units.length; i++)
+            this.queue.push(this.units[i]);
+
+          this.queue.sort((a, b) =>
+            a.currentInitiative > b.currentInitiative ? -1 : 1
+          );
+
+          console.log("Очередь: ");
+          for (let i = 0; i < this.queue.length; i++)
+            console.log(
+              "  " + this.queue[i].name + "  id: " + this.queue[i].id
+            );
+
+          for (let i = 0; i < this.queue.length; i++)
+            this.originQueue.push(this.queue[i]);
+          this.persons.emit("newRound");
+
+          console.log("  Ход " + this.queue[0].name + "  " + this.queue[0].id);
+          this.queue[0].startTurn();
+          this.persons.emit("unitTurn", this.queue[0].id);
+          this.personsSendQueue(this.queue);
+        }
+        startGame() {
+          this.nextRound();
+        }
+        removeUnit(unitID) {
+          for (let i = 0; i < this.units.length; i++) {
+            if (unitID == this.units[i].id) {
+              this.units.splice(i, 1);
+              break;
+            }
+          }
+        }
+        /*-------------UNIT ACTIONS-----------------*/
+        unitUseAbility(abilityID, tileID, socket) {
+          if (abilityID === 2) return;
+          if (this.checkHost(socket))
+            this.currentUnit.useAbility(abilityID, tileID);
+        }
+        /*--------------INIT--------------*/
+        createField() {
+          let t = fs
+            .readFileSync("public/data/field.txt")
+            .toString()
+            .split("#");
+
+          for (let i = 0; i < t.length; i++) {
+            let v = t[i].split(" ");
+            let n = v[0];
+            v.splice(0, 1);
+            for (let i = 0; i < v.length; i++) {
+              v[i] = parseInt(v[i]);
+            }
+            this.tiles.push(new Tile(parseInt(n), v, this));
+          }
+        }
+        addUnitByName(id, name, side) {
+          this.addUnit(new units[name](id, this, side), this.tileByID(id));
+        }
+        addUnit(unit, tile) {
+          this.units.push(unit);
+          unit.tile = tile;
+          tile.unit = unit;
+          this.persons.emit("addUnit", this.unitToSend(unit));
+          unit.appearanceHandler();
+        }
+        /*------------------CHECKES-------------*/
+        checkHost(socket) {
+          if (this.ended) {
+            console.log("Сессия окончена");
+            return false;
+          }
+          return socket.session["connect.sid"] === this.host;
+        }
+        checkAbility(abilityID, socket) {
+          if (!this.checkHost(socket)) return false;
+          if (typeof abilityID != "number") return false;
+          return true;
+        }
+        /*-----------FIND-----------*/
+        tileByID(tileID) {
+          return this.tiles[tileID];
+        }
+        unitByID(unitID) {
+          for (let i = 0; i < this.units.length; i++) {
+            if (this.units[i].id == unitID) return this.units[i];
+          }
+          console.log("  Юнит не найден");
+          return false;
+        }
+        /*----------------SENDING DATA------------------*/
+        sessionToSend(socket) {
+          let p = -1;
+          if (socket != null) {
+            if (socket.session["connect.sid"] === this.player1.cook) p = 0;
+            if (socket.session["connect.sid"] === this.player2.cook) p = 1;
+          }
+          let tiles = [];
+          for (let i = 0; i < this.tiles.length; i++)
+            tiles.push(this.tileToSend(this.tiles[i]));
+          let units = [];
+          for (let i = 0; i < this.units.length; i++)
+            units.push(this.unitToSend(this.units[i]));
+          if (socket != null) this.socketSendQueue(this.queue, socket);
+          return {
+            player: p,
+            p1: this.player1.name,
+            p2: this.player2.name,
+            name: this.name,
+            tiles: tiles,
+            units: units,
+            round: this.round,
+            unit: fs.readFileSync("G:\\course\\public\\obj\\unit.obj", "utf-8"),
+          };
+        }
+        socketSendQueue(queue, socket) {
+          for (let i = 0; i < queue.length; i++)
+            socket.emit("addToQueue", queue[i].id);
+        }
+        personsSendQueue(queue) {
+          for (let i = 0; i < queue.length; i++)
+            this.persons.emit("addToQueue", queue[i].id);
+        }
+        unitToSend(unit) {
+          let effects = [];
+          for (let i = 0; i < unit.effects.length; i++)
+            effects.push(this.effectToSend(unit.effects[i]));
+          return {
+            id: unit.id,
+            name: unit.name,
+
+            originHealth: unit.originHealth,
+            health: unit.health,
+            currentHealth: unit.currentHealth,
+
+            originAttack: unit.originAttack,
+            currentAttack: unit.currentAttack,
+
+            originMoves: unit.originMoves,
+            moves: unit.moves,
+            currentMoves: unit.currentMoves,
+
+            originInitiative: unit.originInitiative,
+            currentInitiative: unit.currentInitiative,
+
+            canCounterAttack: unit.canCounterAttack,
+            canWait: unit.canWait,
+            effects: effects,
+            ranged: unit.ranged,
+            tileID: unit.tile.id,
+            side: unit.side,
+            abilities: [
+              this.abilityToSend(unit.abilities[5]),
+              this.abilityToSend(unit.abilities[6]),
+              this.abilityToSend(unit.abilities[7]),
+            ],
+          };
+        }
+        abilityToSend(ab) {
+          if (!ab) return null;
+          return {
+            reload: ab.reload,
+            currentReload: ab.currentReload,
+            cost: ab.cost,
+            toAlly: ab.toAlly,
+            toEnemy: ab.toEnemy,
+            targeting: ab.targeting,
+            range: ab.range,
+            name: ab.name,
+            img: "/lol",
+            description: "lol eke",
+          };
+        }
+        effectToSend(effect) {
+          return {
+            name: effect.name,
+          };
+        }
+        tileToSend(tile) {
+          if (tile.unit == null)
+            return {
+              id: tile.id,
+              connections: tile.connections,
+              unit: null,
+            };
+          else
+            return {
+              id: tile.id,
+              connections: tile.connections,
+              unitID: tile.unit.id,
+            };
+        }
+      }
+
+      let lobby = new Lobby();
+      let peasant1 = new Peasant(11, lobby, "Yellow");
+      let peasant2 = new Peasant(12, lobby, "Red");
+      let priest = new BloodPriest(22, lobby, "Yellow");
+      console.log(priest);
+      peasant1.Attack(peasant2);
+
+      let arr = [peasant1, peasant2, priest];
+
+      let a = new Linq(arr)
+        .Select((i) => i.Name)
+        .Where((i) => i <= "a")
+        .ToArray();
+
+      console.log(a);
+      a.forEach((i) => console.log(i));
+    </script>
+  </body>
+</html>
